@@ -1,82 +1,238 @@
 ---
 import { getCollection } from "astro:content";
-import Main from "@/layouts/Main.astro";
 import Layout from "@/layouts/Layout.astro";
 import Header from "@/components/Header.astro";
 import Footer from "@/components/Footer.astro";
-import Card from "@/components/Card.astro";
+import Breadcrumb from "@/components/Breadcrumb.astro";
 import getPostsByGroupCondition from "@/utils/getPostsByGroupCondition";
 import { SITE } from "@/config";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
+import { getPath } from "@/utils/getPath";
 
-// Redirect to 404 page if `showArchives` config is false
-if (!SITE.showArchives) {
-  return Astro.redirect("/404");
-}
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+if (!SITE.showArchives) return Astro.redirect("/404");
 
 const posts = await getCollection("blog", ({ data }) => !data.draft);
 
-const months = [
-  "1月",
-  "2月",
-  "3月",
-  "4月",
-  "5月",
-  "6月",
-  "7月",
-  "8月t",
-  "9月",
-  "10月",
-  "11月",
-  "12月",
-];
+const months = ["1月","2月","3月","4月","5月","6月","7月","8月","9月","10月","11月","12月"];
+
+const byYear = Object.entries(
+  getPostsByGroupCondition(posts, p => p.data.pubDatetime.getFullYear())
+).sort(([a], [b]) => Number(b) - Number(a));
 ---
 
-<Layout title={`Archives | ${SITE.title}`}>
-  <Main pageTitle="アーカイブ" pageDesc="">
-    {
-      Object.entries(
-        getPostsByGroupCondition(posts, post =>
-          post.data.pubDatetime.getFullYear()
-        )
-      )
-        .sort(([yearA], [yearB]) => Number(yearB) - Number(yearA))
-        .map(([year, yearGroup]) => (
-          <div>
-            <span class="text-2xl font-bold">{year}</span>
-            <sup class="text-sm">{yearGroup.length}</sup>
-            {Object.entries(
-              getPostsByGroupCondition(
-                yearGroup,
-                post => post.data.pubDatetime.getMonth() + 1
-              )
-            )
-              .sort(([monthA], [monthB]) => Number(monthB) - Number(monthA))
-              .map(([month, monthGroup]) => (
-                <div class="flex flex-col sm:flex-row">
-                  <div class="mt-6 min-w-36 text-lg sm:my-6">
-                    <span class="font-bold">{months[Number(month) - 1]}</span>
-                    <sup class="text-xs">{monthGroup.length}</sup>
+<Layout title={`アーカイブ | ${SITE.title}`}>
+  <Header />
+  <Breadcrumb />
+  <main id="main-content" class="app-layout pb-16">
+    <h1 class="pt-6 pb-8 text-2xl font-semibold sm:text-3xl">アーカイブ</h1>
+
+    <div class="space-y-12">
+      {byYear.map(([year, yearPosts]) => {
+        const byMonth = Object.entries(
+          getPostsByGroupCondition(yearPosts, p => p.data.pubDatetime.getMonth() + 1)
+        ).sort(([a], [b]) => Number(b) - Number(a));
+
+        return (
+          <section class="year-section">
+            <!-- 年ヘッダー -->
+            <div class="year-header">
+              <span class="year-label">{year}</span>
+              <span class="year-count">{yearPosts.length} 記事</span>
+            </div>
+
+            <!-- 月ごとのグループ -->
+            <div class="months-container">
+              {byMonth.map(([month, monthPosts]) => {
+                const sorted = [...monthPosts].sort(
+                  (a, b) => new Date(b.data.pubDatetime).getTime() - new Date(a.data.pubDatetime).getTime()
+                );
+                return (
+                  <div class="month-group">
+                    <!-- 月バッジ -->
+                    <div class="month-badge">
+                      <span>{months[Number(month) - 1]}</span>
+                      <span class="month-count">{monthPosts.length}</span>
+                    </div>
+
+                    <!-- タイムライン -->
+                    <ul class="timeline">
+                      {sorted.map((post, i) => {
+                        const dt = dayjs(post.data.pubDatetime).tz(post.data.timezone || SITE.timezone);
+                        return (
+                          <li class="timeline-item">
+                            <span class="timeline-dot" aria-hidden="true"></span>
+                            {i < sorted.length - 1 && <span class="timeline-line" aria-hidden="true"></span>}
+                            <a href={getPath(post.id, post.filePath)} class="timeline-link">
+                              <span class="timeline-title">{post.data.title}</span>
+                              <time datetime={dt.toISOString()} class="timeline-date">
+                                {dt.format("MM/DD")}
+                              </time>
+                            </a>
+                          </li>
+                        );
+                      })}
+                    </ul>
                   </div>
-                  <ul>
-                    {monthGroup
-                      .sort(
-                        (a, b) =>
-                          Math.floor(
-                            new Date(b.data.pubDatetime).getTime() / 1000
-                          ) -
-                          Math.floor(
-                            new Date(a.data.pubDatetime).getTime() / 1000
-                          )
-                      )
-                      .map(data => (
-                        <Card {...data} />
-                      ))}
-                  </ul>
-                </div>
-              ))}
-          </div>
-        ))
-    }
-  </Main>
+                );
+              })}
+            </div>
+          </section>
+        );
+      })}
+    </div>
+  </main>
   <Footer />
 </Layout>
+
+<style>
+  /* 年ヘッダー */
+  .year-header {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+    padding-bottom: 0.625rem;
+    border-bottom: 2px solid var(--accent);
+  }
+  .year-label {
+    font-size: 1.875rem;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+  }
+  .year-count {
+    font-size: 0.8rem;
+    opacity: 0.4;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* 月グループ */
+  .months-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    padding-left: 0.25rem;
+  }
+  .month-group {
+    display: flex;
+    gap: 1.25rem;
+    align-items: flex-start;
+  }
+
+  /* 月バッジ */
+  .month-badge {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.125rem;
+    min-width: 2.5rem;
+    padding: 0.375rem 0.5rem;
+    border-radius: 0.375rem;
+    background: var(--muted);
+    font-size: 0.75rem;
+    font-weight: 700;
+    line-height: 1.2;
+    text-align: center;
+    flex-shrink: 0;
+    margin-top: 0.125rem;
+  }
+  .month-count {
+    font-size: 0.65rem;
+    font-weight: 400;
+    opacity: 0.5;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* タイムライン */
+  .timeline {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+  .timeline-item {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    padding-left: 1.25rem;
+    padding-bottom: 0.75rem;
+  }
+  .timeline-item:last-child {
+    padding-bottom: 0;
+  }
+
+  /* ドット */
+  .timeline-dot {
+    position: absolute;
+    left: 0;
+    top: 0.45rem;
+    width: 0.45rem;
+    height: 0.45rem;
+    border-radius: 50%;
+    background: var(--border);
+    border: 1.5px solid var(--foreground);
+    opacity: 0.35;
+    flex-shrink: 0;
+    transition: background 0.15s, opacity 0.15s;
+  }
+  .timeline-item:hover .timeline-dot {
+    background: var(--accent);
+    border-color: var(--accent);
+    opacity: 1;
+  }
+
+  /* 縦線（最後の項目以外） */
+  .timeline-line {
+    position: absolute;
+    left: 0.195rem;
+    top: 0.85rem;
+    bottom: 0;
+    width: 1px;
+    background: var(--border);
+    opacity: 0.4;
+  }
+
+  /* リンク行 */
+  .timeline-link {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+    width: 100%;
+    text-decoration: none;
+    color: inherit;
+    padding: 0.05rem 0;
+    transition: color 0.15s;
+  }
+  .timeline-link:hover {
+    color: var(--accent);
+  }
+  .timeline-title {
+    font-size: 0.875rem;
+    font-weight: 500;
+    line-height: 1.4;
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .timeline-date {
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+    opacity: 0.35;
+    flex-shrink: 0;
+    transition: opacity 0.15s;
+  }
+  .timeline-link:hover .timeline-date {
+    opacity: 0.6;
+  }
+</style>

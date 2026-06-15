@@ -1,0 +1,167 @@
+---
+export const prerender = true;
+import { getCollection } from "astro:content";
+import Layout from "@/layouts/Layout.astro";
+import Header from "@/components/Header.astro";
+import Footer from "@/components/Footer.astro";
+
+const entries = await getCollection("wiki", ({ data }) => !data.draft);
+const sorted = entries.sort((a, b) => a.data.title.localeCompare(b.data.title, "ja"));
+const allTags = [...new Set(sorted.flatMap(e => e.data.tags))].sort((a, b) => a.localeCompare(b, "ja"));
+---
+
+<Layout title="事典 — Koizumi Kota" description="個人用百科事典">
+  <Header />
+  <main id="main-content" class="app-layout">
+
+    <!-- ヘッダー -->
+    <section class="pt-8 pb-6 border-b border-border">
+      <h1 class="my-4 text-xl font-bold sm:my-6 sm:text-3xl">事典</h1>
+      <p class="text-sm" style="opacity: 0.55;">
+        研究・学習の過程で積み上げた概念・人名・用語のまとめ。随時更新。
+      </p>
+    </section>
+
+    <!-- 検索エリア -->
+    <section class="py-6 border-b border-border">
+      <div class="relative mb-4">
+        <svg
+          class="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 pointer-events-none"
+          style="opacity: 0.4;"
+          xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
+          fill="none" stroke="currentColor" stroke-width="2"
+        >
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+        </svg>
+        <input
+          id="wiki-search"
+          type="search"
+          placeholder="項目を検索…"
+          class="w-full rounded-lg border py-3 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 transition-shadow"
+          style="border-color: var(--border); background: var(--background); focus-ring-color: var(--accent);"
+        />
+      </div>
+
+      <!-- タグフィルター -->
+      <div id="tag-filters" class="flex flex-wrap gap-2">
+        <button data-tag="all" class="tag-btn active-tag rounded-full border px-3 py-1 text-xs font-medium transition-colors">
+          すべて
+        </button>
+        {allTags.map(tag => (
+          <button data-tag={tag} class="tag-btn rounded-full border px-3 py-1 text-xs font-medium transition-colors hover:text-accent"
+            style="border-color: var(--border);">
+            {tag}
+          </button>
+        ))}
+      </div>
+    </section>
+
+    <!-- 記事一覧 -->
+    <section class="pt-2 pb-16">
+      <p id="result-count" class="py-3 text-xs" style="opacity: 0.4;">{sorted.length} 項目</p>
+
+      <ul id="wiki-list">
+        {sorted.map(entry => (
+          <li
+            class="wiki-item group relative border-b py-4 last:border-b-0"
+            style="border-color: var(--border);"
+            data-title={entry.data.title}
+            data-tags={entry.data.tags.join(",")}
+          >
+            <span class="absolute left-0 top-0 h-full w-0.5 rounded-r opacity-0 transition-all duration-200 group-hover:opacity-100"
+              style="background: var(--accent);" aria-hidden="true"></span>
+
+            <a href={`/wiki/${entry.id}/`} class="block pl-3 focus-visible:outline-none">
+              <div class="flex items-start justify-between gap-4">
+                <div class="min-w-0">
+                  <span class="font-semibold transition-colors group-hover:text-accent">
+                    {entry.data.title}
+                  </span>
+                  <p class="mt-1 text-sm line-clamp-2 leading-relaxed" style="opacity: 0.6;">
+                    {entry.data.description}
+                  </p>
+                </div>
+                <svg class="mt-1 size-4 shrink-0 transition-colors group-hover:text-accent"
+                  style="opacity: 0.3;" xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M9 18l6-6-6-6"/>
+                </svg>
+              </div>
+              {entry.data.tags.length > 0 && (
+                <div class="mt-2 flex flex-wrap gap-1.5">
+                  {entry.data.tags.map(tag => (
+                    <span class="rounded-sm px-1.5 py-0.5 text-[10px] font-medium"
+                      style="background: var(--muted); opacity: 0.8;">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </a>
+          </li>
+        ))}
+      </ul>
+
+      <p id="no-result" class="hidden py-12 text-center text-sm" style="opacity: 0.5;">
+        該当する項目が見つかりませんでした
+      </p>
+    </section>
+  </main>
+  <Footer />
+</Layout>
+
+<style>
+  .active-tag {
+    border-color: var(--accent);
+    color: var(--accent);
+    background-color: color-mix(in srgb, var(--accent) 12%, transparent);
+  }
+  #wiki-search:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 40%, transparent);
+  }
+</style>
+
+<script>
+  function initWiki() {
+    const searchInput = document.getElementById("wiki-search") as HTMLInputElement;
+    const items = document.querySelectorAll<HTMLElement>(".wiki-item");
+    const countEl = document.getElementById("result-count");
+    const noResult = document.getElementById("no-result");
+    const tagBtns = document.querySelectorAll<HTMLButtonElement>(".tag-btn");
+
+    let activeTag = "all";
+
+    function filter() {
+      const q = searchInput.value.toLowerCase().trim();
+      let visible = 0;
+      items.forEach(item => {
+        const title = (item.dataset.title ?? "").toLowerCase();
+        const tags = (item.dataset.tags ?? "").toLowerCase().split(",");
+        const matchesQuery = !q || title.includes(q);
+        const matchesTag = activeTag === "all" || tags.includes(activeTag);
+        if (matchesQuery && matchesTag) {
+          item.style.display = "";
+          visible++;
+        } else {
+          item.style.display = "none";
+        }
+      });
+      if (countEl) countEl.textContent = `${visible} 項目`;
+      if (noResult) noResult.classList.toggle("hidden", visible > 0);
+    }
+
+    searchInput?.addEventListener("input", filter);
+    tagBtns.forEach(btn => {
+      btn.addEventListener("click", () => {
+        tagBtns.forEach(b => b.classList.remove("active-tag"));
+        btn.classList.add("active-tag");
+        activeTag = btn.dataset.tag ?? "all";
+        filter();
+      });
+    });
+  }
+
+  initWiki();
+  document.addEventListener("astro:after-swap", initWiki);
+</script>

@@ -100,21 +100,108 @@ const recentPosts = sortedPosts.filter(({ data }) => !data.featured);
       )
     }
 
-    <div class="my-8 text-center">
-      <LinkButton href="/posts/">
-        すべての記事
-        <IconArrowRight class="inline-block rtl:-rotate-180" />
-      </LinkButton>
-    </div>
-    <div class="my-8 text-center">
-      <LinkButton href="/archives/">
-        アーカイブ
-        <IconArrowRight class="inline-block rtl:-rotate-180" />
-      </LinkButton>
+    <!-- ナビゲーションカード -->
+    <div class="my-10 grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <a href="/posts/" class="nav-card group">
+        <div class="nav-card-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+          </svg>
+        </div>
+        <div class="nav-card-body">
+          <span class="nav-card-title">記事一覧</span>
+          <span class="nav-card-desc">すべての投稿</span>
+        </div>
+        <svg class="nav-card-arrow" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+      </a>
+
+      <a href="/archives/" class="nav-card group">
+        <div class="nav-card-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+          </svg>
+        </div>
+        <div class="nav-card-body">
+          <span class="nav-card-title">アーカイブ</span>
+          <span class="nav-card-desc">年月別の記録</span>
+        </div>
+        <svg class="nav-card-arrow" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+      </a>
+
+      <a href="/wiki/" class="nav-card group">
+        <div class="nav-card-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+          </svg>
+        </div>
+        <div class="nav-card-body">
+          <span class="nav-card-title">事典</span>
+          <span class="nav-card-desc">概念・用語のまとめ</span>
+        </div>
+        <svg class="nav-card-arrow" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+      </a>
     </div>
   </main>
   <Footer />
 </Layout>
+
+<style>
+  .nav-card {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+    padding: 1rem 1.125rem;
+    border: 1px solid var(--border);
+    border-radius: 0.625rem;
+    transition: border-color 0.15s, background 0.15s, transform 0.15s;
+    text-decoration: none;
+    color: inherit;
+  }
+  .nav-card:hover {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 5%, transparent);
+    transform: translateY(-1px);
+  }
+  .nav-card-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 0.5rem;
+    background: var(--muted);
+    color: var(--accent);
+    flex-shrink: 0;
+    transition: background 0.15s;
+  }
+  .nav-card:hover .nav-card-icon {
+    background: color-mix(in srgb, var(--accent) 15%, transparent);
+  }
+  .nav-card-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    min-width: 0;
+  }
+  .nav-card-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+  .nav-card-desc {
+    font-size: 0.75rem;
+    opacity: 0.5;
+  }
+  .nav-card-arrow {
+    opacity: 0.3;
+    transition: opacity 0.15s, transform 0.15s;
+    flex-shrink: 0;
+  }
+  .nav-card:hover .nav-card-arrow {
+    opacity: 0.8;
+    transform: translateX(2px);
+  }
+</style>
 
 <script>
   document.addEventListener("astro:page-load", () => {

@@ -3,6 +3,7 @@ import { glob } from "astro/loaders";
 import { SITE } from "@/config";
 
 export const BLOG_PATH = "src/data/blog";
+export const WIKI_PATH = "src/data/wiki";
 
 const blog = defineCollection({
   loader: glob({ pattern: "**/[^_]*.md", base: `./${BLOG_PATH}` }),
@@ -23,4 +24,15 @@ const blog = defineCollection({
     }),
 });
 
-export const collections = { blog };
+const wiki = defineCollection({
+  loader: glob({ pattern: "**/[^_]*.md", base: `./${WIKI_PATH}` }),
+  schema: z.object({
+    title: z.string(),
+    description: z.string(),
+    tags: z.array(z.string()).default([]),
+    modDatetime: z.coerce.date().optional().nullable(),
+    draft: z.boolean().optional(),
+  }),
+});
+
+export const collections = { blog, wiki };

@@ -2,32 +2,68 @@
 import type { CollectionEntry } from "astro:content";
 import { slugifyStr } from "@/utils/slugify";
 import { getPath } from "@/utils/getPath";
-import Datetime from "./Datetime.astro";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
+import { SITE } from "@/config";
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 type Props = {
   variant?: "h2" | "h3";
 } & CollectionEntry<"blog">;
 
 const { variant: Heading = "h2", id, data, filePath } = Astro.props;
+const { title, description, pubDatetime, modDatetime, tags, timezone: postTimezone } = data;
 
-const { title, description, ...props } = data;
+const isModified = modDatetime && modDatetime > pubDatetime;
+const datetime = dayjs(isModified ? modDatetime : pubDatetime).tz(postTimezone || SITE.timezone);
+const dateFormatted = datetime.format("YYYY/MM/DD");
+const dateISO = datetime.toISOString();
 ---
 
-<li class="my-6">
-  <a
-    href={getPath(id, filePath)}
-    class:list={[
-      "inline-block text-lg font-medium text-accent",
-      "decoration-dashed underline-offset-4 hover:underline",
-      "focus-visible:no-underline focus-visible:underline-offset-0",
-    ]}
-  >
+<li class="post-card group relative my-0 py-5 border-b border-border last:border-b-0">
+  <!-- ホバー時の左アクセントライン -->
+  <span class="card-line absolute left-0 top-0 h-full w-0.5 rounded-r bg-accent opacity-0 transition-all duration-200 group-hover:opacity-100" aria-hidden="true"></span>
+
+  <a href={getPath(id, filePath)} class="block pl-3 focus-visible:outline-none">
+    <!-- タイトル -->
     <Heading
+      class="text-base font-semibold leading-snug transition-colors duration-150 group-hover:text-accent"
       style={{ viewTransitionName: slugifyStr(title.replaceAll(".", "-")) }}
     >
       {title}
     </Heading>
+
+    <!-- メタ情報 -->
+    <div class="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+      <time
+        datetime={dateISO}
+        class="text-xs tabular-nums"
+        style="color: var(--foreground); opacity: 0.5;"
+      >
+        {isModified ? "更新 " : ""}{dateFormatted}
+      </time>
+      {tags && tags.length > 0 && (
+        <div class="flex flex-wrap gap-1">
+          {tags.slice(0, 3).map(tag => (
+            <span
+              class="rounded-sm px-1.5 py-0.5 text-[10px] font-medium"
+              style="background: var(--muted); color: var(--foreground); opacity: 0.75;"
+            >
+              {tag}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+
+    <!-- 説明文 -->
+    {description && (
+      <p class="mt-2 text-sm leading-relaxed line-clamp-2" style="color: var(--foreground); opacity: 0.65;">
+        {description}
+      </p>
+    )}
   </a>
-  <Datetime {...props} />
-  <p>{description}</p>
 </li>
